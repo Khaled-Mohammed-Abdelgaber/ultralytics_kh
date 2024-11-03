@@ -136,7 +136,7 @@ class BaseTrainer:
         # Optimization utils init
         self.lf = None
         self.scheduler = None
-
+        print("Khaled's Model")
         # Epoch level metrics
         self.best_fitness = None
         self.fitness = None
