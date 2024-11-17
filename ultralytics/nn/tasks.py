@@ -1051,7 +1051,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             print("ch: ",ch)
             print("f: ",f)
             
-            args.append([ch[x] for x in f])
+            args.append([ch[x-1] for x in f])
             if m is Segment:
                 args[2] = make_divisible(min(args[2], max_channels) * width, 8)
             if m in {Detect, Segment, Pose, OBB}:
