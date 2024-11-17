@@ -49,7 +49,78 @@ __all__ = (
     "Attention",
     "PSA",
     "SCDown",
+,"ECABasicBlock"
 )
+
+class eca_layer(nn.Module):
+    """Constructs a ECA module.
+
+    Args:
+        channel: Number of channels of the input feature map
+        k_size: Adaptive selection of kernel size
+    """
+    def __init__(self, channel, k_size=3):
+        super(eca_layer, self).__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.conv = nn.Conv1d(1, 1, kernel_size=k_size, padding=(k_size - 1) // 2, bias=False) 
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        # feature descriptor on the global spatial information
+        y = self.avg_pool(x)
+
+        # Two different branches of ECA module
+        y = self.conv(y.squeeze(-1).transpose(-1, -2)).transpose(-1, -2).unsqueeze(-1)
+
+        # Multi-scale information fusion
+        y = self.sigmoid(y)
+
+        return x * y.expand_as(x)
+    
+def conv3x3(in_planes, out_planes, stride=1):
+    """3x3 convolution with padding"""
+    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
+                    padding=1, bias=False)
+
+
+class ECABasicBlock(nn.Module):
+    expansion = 1
+
+    def __init__(self, inplanes, planes, stride=1, downsample=None, k_size=3):
+        stride = 1
+        k_size = 3
+        downsample=None
+        super(ECABasicBlock, self).__init__()
+        """print("from eca_basic_block in_planes = ", inplanes," planes = ", planes)
+        print("from eca_basic_block k_size = ", k_size," stride = ", stride)
+        print("from eca_basic_block downsample = ", downsample)"""
+        self.conv1 = conv3x3(inplanes, planes, stride)
+        self.bn1 = nn.BatchNorm2d(planes)
+        self.relu = nn.ReLU(inplace=True)
+        self.conv2 = conv3x3(planes, planes, 1)
+        self.bn2 = nn.BatchNorm2d(planes)
+        self.eca = eca_layer(planes, k_size)
+        self.downsample = downsample
+        self.stride = stride
+
+    def forward(self, x):
+        #print("from eca basic block input shape is ", x.shape)
+        residual = x
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+
+        out = self.conv2(out)
+        out = self.bn2(out)
+        out = self.eca(out)
+        #print("from eca basic block out shape is ", out.shape)
+        if self.downsample is not None:
+            residual = self.downsample(x)
+
+        out += residual
+        out = self.relu(out)
+
+        return out
 
 
 class DFL(nn.Module):
