@@ -55,7 +55,7 @@ from .block import (
     RepNCSPELAN4,
     RepVGGDW,
     ResNetLayer,
-    SCDown,
+    SCDown,ECABasicBlock
 )
 from .conv import (
     CBAM,
