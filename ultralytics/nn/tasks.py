@@ -60,7 +60,7 @@ from ultralytics.nn.modules import (
     SCDown,
     Segment,
     WorldDetect,
-    v10Detect,CBAM,
+    v10Detect,CBAM,ECABasicBlock
 )
 from ultralytics.utils import DEFAULT_CFG_DICT, DEFAULT_CFG_KEYS, LOGGER, colorstr, emojis, yaml_load
 from ultralytics.utils.checks import check_requirements, check_suffix, check_yaml
