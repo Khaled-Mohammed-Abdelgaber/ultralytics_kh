@@ -49,7 +49,7 @@ __all__ = (
     "Attention",
     "PSA",
     "SCDown",
-,"ECABasicBlock"
+ "ECABasicBlock"
 )
 
 class eca_layer(nn.Module):
