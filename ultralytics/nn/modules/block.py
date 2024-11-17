@@ -86,7 +86,7 @@ def conv3x3(in_planes, out_planes, stride=1):
 class ECABasicBlock(nn.Module):
     expansion = 1
 
-    def __init__(self, inplanes, planes, stride=1, downsample=None, k_size=3):
+    def __init__(self, inplanes, planes, stride=1, k_size=3, downsample=None):
         stride = 1
         k_size = 3
         downsample=None
