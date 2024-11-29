@@ -62,7 +62,7 @@ from .conv import (
     ChannelAttention,
     Concat,
     Conv,
-    Conv2,
+    Conv2,att_Conv2,att_Conv,
     ConvTranspose,
     DWConv,
     DWConvTranspose2d,
@@ -88,7 +88,7 @@ from .transformer import (
 
 __all__ = (
     "Conv",
-    "Conv2",
+    "Conv2","att_Conv2","att_Conv",
     "LightConv",
     "RepConv",
     "DWConv",
@@ -155,5 +155,5 @@ __all__ = (
     "CIB",
     "C2fCIB",
     "Attention",
-    "PSA",
+    "PSA","ECABasicBlock"
 )
