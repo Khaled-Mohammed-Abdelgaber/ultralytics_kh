@@ -48,8 +48,7 @@ __all__ = (
     "C2fCIB",
     "Attention",
     "PSA",
-    "SCDown",
- "ECABasicBlock"
+    "SCDown","MaxSigmoidAttnBlock","ECABasicBlock"
 )
 
 class eca_layer(nn.Module):
@@ -86,9 +85,9 @@ def conv3x3(in_planes, out_planes, stride=1):
 class ECABasicBlock(nn.Module):
     expansion = 1
 
-    def __init__(self, inplanes, planes, stride=1, k_size=3, downsample=None):
-        #stride = 1
-        #k_size = 3
+    def __init__(self, inplanes, planes, stride=1, downsample=None, k_size=3):
+        stride = 1
+        k_size = 3
         downsample=None
         super(ECABasicBlock, self).__init__()
         """print("from eca_basic_block in_planes = ", inplanes," planes = ", planes)
@@ -121,6 +120,7 @@ class ECABasicBlock(nn.Module):
         out = self.relu(out)
 
         return out
+
 
 
 class DFL(nn.Module):
