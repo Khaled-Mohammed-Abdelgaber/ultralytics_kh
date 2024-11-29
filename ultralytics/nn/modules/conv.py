@@ -9,7 +9,7 @@ import torch.nn as nn
 
 __all__ = (
     "Conv",
-    "Conv2",
+    "Conv2","att_Conv","att_Conv2",
     "LightConv",
     "DWConv",
     "DWConvTranspose2d",
@@ -22,6 +22,7 @@ __all__ = (
     "Concat",
     "RepConv",
 )
+
 ###################################################################################
 class simam_module(torch.nn.Module):
     def __init__(self, channels = None, e_lambda = 1e-4):
@@ -59,7 +60,10 @@ def autopad(k, p=None, d=1):  # kernel, padding, dilation
         p = k // 2 if isinstance(k, int) else [x // 2 for x in k]  # auto-pad
     return p
 
-class Conv(nn.Module):
+##############################################################################################################
+# Convolution with Attention
+###############################################################################################################
+class att_Conv(nn.Module):
     """Standard convolution with args(ch_in, ch_out, kernel, stride, padding, groups, dilation, activation)."""
 
     default_act = nn.SiLU()  # default activation
@@ -79,6 +83,56 @@ class Conv(nn.Module):
     def forward_fuse(self, x):
         """Perform transposed convolution of 2D data."""
         return self.att_module(self.act(self.conv(x)))
+
+
+class att_Conv2(att_Conv):
+    """Simplified RepConv module with Conv fusing."""
+
+    def __init__(self, c1, c2, k=3, s=1, p=None, g=1, d=1, act=True):
+        """Initialize Conv layer with given arguments including activation."""
+        super().__init__(c1, c2, k, s, p, g=g, d=d, act=act)
+        self.cv2 = nn.Conv2d(c1, c2, 1, s, autopad(1, p, d), groups=g, dilation=d, bias=False)  # add 1x1 conv
+
+    def forward(self, x):
+        """Apply convolution, batch normalization and activation to input tensor."""
+        return self.att_module(self.act(self.bn(self.conv(x) + self.cv2(x))))
+
+    def forward_fuse(self, x):
+        """Apply fused convolution, batch normalization and activation to input tensor."""
+        return self.att_module(self.act(self.bn(self.conv(x))))
+
+    def fuse_convs(self):
+        """Fuse parallel convolutions."""
+        w = torch.zeros_like(self.conv.weight.data)
+        i = [x // 2 for x in w.shape[2:]]
+        w[:, :, i[0] : i[0] + 1, i[1] : i[1] + 1] = self.cv2.weight.data.clone()
+        self.conv.weight.data += w
+        self.__delattr__("cv2")
+        self.forward = self.forward_fuse
+
+##############################################################################################################
+######### Normal Convolution 
+##############################################################################################################
+class Conv(nn.Module):
+    """Standard convolution with args(ch_in, ch_out, kernel, stride, padding, groups, dilation, activation)."""
+
+    default_act = nn.SiLU()  # default activation
+    
+    def __init__(self, c1, c2, k=1, s=1, p=None, g=1, d=1, act=True):
+        """Initialize Conv layer with given arguments including activation."""
+        super().__init__()
+        self.conv = nn.Conv2d(c1, c2, k, s, autopad(k, p, d), groups=g, dilation=d, bias=False)
+        self.bn = nn.BatchNorm2d(c2)
+        self.act = self.default_act if act is True else act if isinstance(act, nn.Module) else nn.Identity()
+        
+        
+    def forward(self, x):
+        """Apply convolution, batch normalization and activation to input tensor."""
+        return self.act(self.bn(self.conv(x)))
+
+    def forward_fuse(self, x):
+        """Perform transposed convolution of 2D data."""
+        return self.act(self.conv(x))
 
 
 class Conv2(Conv):
@@ -105,7 +159,7 @@ class Conv2(Conv):
         self.conv.weight.data += w
         self.__delattr__("cv2")
         self.forward = self.forward_fuse
-
+###############################################################################################################
 
 class LightConv(nn.Module):
     """
@@ -337,7 +391,6 @@ class CBAM(nn.Module):
 
     def __init__(self, c1, kernel_size=7):
         """Initialize CBAM with given input channel (c1) and kernel size."""
-        kernel_size=7
         super().__init__()
         self.channel_attention = ChannelAttention(c1)
         self.spatial_attention = SpatialAttention(kernel_size)
