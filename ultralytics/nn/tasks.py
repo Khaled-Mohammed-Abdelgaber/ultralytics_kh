@@ -21,6 +21,7 @@ from ultralytics.nn.modules import (
     OBB,
     PSA,
     SPP,
+    CBAM,
     SPPELAN,
     SPPF,
     AConv,
@@ -38,7 +39,7 @@ from ultralytics.nn.modules import (
     CBLinear,
     Classify,
     Concat,
-    Conv,
+    Conv,att_Conv2,att_Conv,
     Conv2,
     ConvTranspose,
     Detect,
@@ -60,8 +61,9 @@ from ultralytics.nn.modules import (
     SCDown,
     Segment,
     WorldDetect,
-    v10Detect,CBAM,ECABasicBlock
+    v10Detect,ECABasicBlock,
 )
+from ultralytics.nn.modules.block import MaxSigmoidAttnBlock
 from ultralytics.utils import DEFAULT_CFG_DICT, DEFAULT_CFG_KEYS, LOGGER, colorstr, emojis, yaml_load
 from ultralytics.utils.checks import check_requirements, check_suffix, check_yaml
 from ultralytics.utils.loss import (
@@ -967,7 +969,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
         n = n_ = max(round(n * depth), 1) if n > 1 else n  # depth gain
         if m in {
             Classify,
-            Conv,
+            Conv,att_Conv2,att_Conv,
             ConvTranspose,
             GhostConv,
             Bottleneck,
@@ -998,7 +1000,8 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             RepC3,
             PSA,
             SCDown,
-            C2fCIB,CBAM,ECABasicBlock,
+            C2fCIB,
+	    MaxSigmoidAttnBlock,ECABasicBlock
         }:
             c1, c2 = ch[f], args[0]
             if c2 != nc:  # if c2 not equal to number of classes (i.e. for Classify() output)
@@ -1024,7 +1027,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
                 RepC3,
                 C2fPSA,
                 C2fCIB,
-                C2PSA,ECABasicBlock
+                C2PSA,
             }:
                 args.insert(2, n)  # number of repeats
                 n = 1
@@ -1047,8 +1050,6 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
         elif m is Concat:
             c2 = sum(ch[x] for x in f)
         elif m in {Detect, WorldDetect, Segment, Pose, OBB, ImagePoolingAttn, v10Detect}:
-            
-            
             args.append([ch[x] for x in f])
             if m is Segment:
                 args[2] = make_divisible(min(args[2], max_channels) * width, 8)
