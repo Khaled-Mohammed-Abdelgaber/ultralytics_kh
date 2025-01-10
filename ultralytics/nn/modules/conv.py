@@ -6,7 +6,7 @@ import math
 import numpy as np
 import torch
 import torch.nn as nn
-
+import torch.nn.functional as F
 __all__ = (
     "Conv",
     "Conv2","att_Conv","att_Conv2",
