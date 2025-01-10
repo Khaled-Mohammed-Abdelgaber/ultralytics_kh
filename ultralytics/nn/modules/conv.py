@@ -50,6 +50,38 @@ class simam_module(torch.nn.Module):
 
         return x * self.activaton(y)
 
+class SelfAttention(nn.Module):
+    def __init__(self, in_channels):
+        super(SelfAttention, self).__init__()
+        self.in_channels = in_channels
+
+        # Convolutions for query, key, and value
+        self.query_conv = nn.Conv2d(in_channels, in_channels // 8, kernel_size=1)
+        self.key_conv = nn.Conv2d(in_channels, in_channels // 8, kernel_size=1)
+        self.value_conv = nn.Conv2d(in_channels, in_channels, kernel_size=1)
+
+        # Learnable gamma parameter
+        self.gamma = nn.Parameter(torch.zeros(1))
+
+    def forward(self, x):
+        batch_size, channels, height, width = x.size()
+
+        # Generate query, key, and value
+        query = self.query_conv(x).view(batch_size, -1, height * width)  # (batch_size, channels // 8, height * width)
+        key = self.key_conv(x).view(batch_size, -1, height * width)      # (batch_size, channels // 8, height * width)
+        value = self.value_conv(x).view(batch_size, -1, height * width)  # (batch_size, channels, height * width)
+
+        # Compute attention scores
+        attention_scores = torch.bmm(query.permute(0, 2, 1), key)  # (batch_size, height * width, height * width)
+        attention_scores = F.softmax(attention_scores, dim=-1)     # Apply softmax along the last axis
+
+        # Apply attention to the value
+        out = torch.bmm(value, attention_scores.permute(0, 2, 1))  # (batch_size, channels, height * width)
+        out = out.view(batch_size, channels, height, width)        # Reshape back to original shape
+
+        # Combine attention output with the original input
+        out = self.gamma * out + x
+        return out
 ###################################################################################
 
 def autopad(k, p=None, d=1):  # kernel, padding, dilation
@@ -74,7 +106,7 @@ class att_Conv(nn.Module):
         self.conv = nn.Conv2d(c1, c2, k, s, autopad(k, p, d), groups=g, dilation=d, bias=False)
         self.bn = nn.BatchNorm2d(c2)
         self.act = self.default_act if act is True else act if isinstance(act, nn.Module) else nn.Identity()
-        self.att_module = simam_module(c2)
+        self.att_module = SelfAttention(c2)
         
     def forward(self, x):
         """Apply convolution, batch normalization and activation to input tensor."""
